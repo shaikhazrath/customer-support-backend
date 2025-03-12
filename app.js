@@ -11,10 +11,21 @@ const projectRoutes = require('./routes/projects');
 const { config } = require('dotenv');
 // Initialize Express app
 const app = express();
+const allowedOrigins = [
+  'http://localhost:3000', // Local development
+  'https://thesuperchatbot.vercel.app/' // Replace with your frontend's domain on Render
+];
+
 app.use(cors({
-  origin: 'http://localhost:3000', // Replace wildcard with exact origin
-  credentials: true // This is important for cookies/sessions
-}));config({path:'./.env'})
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true // Allow cookies/sessions
+}));
 // Connect to MongoDB
 connectDB();
 
@@ -24,7 +35,7 @@ app.use(express.urlencoded({ extended: false }));
 
 // Session configuration
 app.use(session({
-  secret: 'your_secret_key',
+  secret: process.env.SESSION_SECRET || 'your_secret_key', // Use environment variable for security
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
@@ -32,7 +43,10 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24 // 1 day
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+    httpOnly: true,              // Prevent client-side JavaScript access
+    secure: process.env.NODE_ENV === 'production', // Enable Secure flag in production
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // Allow cross-origin cookies in production
   }
 }));
 
