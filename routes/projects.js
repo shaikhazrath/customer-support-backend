@@ -1,10 +1,9 @@
- 
-
 // routes/projects.js
 const express = require('express');
 const router = express.Router();
 const Project = require('../models/Project');
 const { isAuthenticated } = require('../middleware/auth');
+const jwt = require('jsonwebtoken'); // Import jsonwebtoken
 
 // Apply auth middleware to all project routes
 router.use(isAuthenticated);
@@ -14,7 +13,8 @@ router.use(isAuthenticated);
 // @access  Private
 router.get('/', async (req, res) => {
   try {
-    const projects = await Project.find({ user: req.session.userId }).sort({ createdAt: -1 });
+    // Use req.user.id from the JWT payload
+    const projects = await Project.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
     console.error(err.message);
@@ -29,11 +29,11 @@ router.post('/', async (req, res) => {
   const { name, transcript_id } = req.body;
 
   try {
-    // Create new project
+    // Create new project using req.user.id from the JWT payload
     const newProject = new Project({
       name,
       transcript_id,
-      user: req.session.userId
+      user: req.user.id
     });
 
     // Save project
@@ -51,13 +51,13 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
-    
+
     if (!project) {
       return res.status(404).json({ msg: 'Project not found' });
     }
 
-    // Check user owns the project
-    if (project.user.toString() !== req.session.userId) {
+    // Check user owns the project using req.user.id from the JWT payload
+    if (project.user.toString() !== req.user.id) {
       return res.status(401).json({ msg: 'User not authorized' });
     }
 
@@ -79,19 +79,19 @@ router.put('/:id', async (req, res) => {
 
   try {
     let project = await Project.findById(req.params.id);
-    
+
     if (!project) {
       return res.status(404).json({ msg: 'Project not found' });
     }
 
-    // Check user owns the project
-    if (project.user.toString() !== req.session.userId) {
+    // Check user owns the project using req.user.id from the JWT payload
+    if (project.user.toString() !== req.user.id) {
       return res.status(401).json({ msg: 'User not authorized' });
     }
 
     // Update project
     project = await Project.findByIdAndUpdate(
-      req.params.id, 
+      req.params.id,
       { name, transcript_id },
       { new: true }
     );
@@ -112,13 +112,13 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
-    
+
     if (!project) {
       return res.status(404).json({ msg: 'Project not found' });
     }
 
-    // Check user owns the project
-    if (project.user.toString() !== req.session.userId) {
+    // Check user owns the project using req.user.id from the JWT payload
+    if (project.user.toString() !== req.user.id) {
       return res.status(401).json({ msg: 'User not authorized' });
     }
 
